@@ -1,0 +1,2 @@
+# Rustico's bk normalizations for SGC
+1.061098e-05

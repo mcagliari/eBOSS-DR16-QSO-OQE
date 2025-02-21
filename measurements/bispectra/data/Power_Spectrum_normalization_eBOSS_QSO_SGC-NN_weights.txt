@@ -1,0 +1,2 @@
+# Rustico's pk normalizations for SGC
+9.831438e-01

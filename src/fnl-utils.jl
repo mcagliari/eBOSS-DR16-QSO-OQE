@@ -2,6 +2,9 @@ using ArgParse
 using DelimitedFiles
 using LoopVectorization
 using Dierckx
+using Zygote
+using ChainRulesCore
+using Tullio
 
 eboss_folder = ENV["EBOSS_DIR"]
 
@@ -9,7 +12,7 @@ function parse_commandline()
     s = ArgParseSettings(description = "Define the Turing model, compute the map and the MCMC")
 
     choise_sample = ["N", "S"]
-    choise_p = [0, 1, 1.6, 3]
+    choise_p = [-1, 0, 1, 1.6, 3]
 
     @add_arg_table s begin
         "--sample"
@@ -18,10 +21,14 @@ function parse_commandline()
             range_tester = (x->x ∈ choise_sample)
             required = true
         "--p"
-            help = "value of p, either 0, 1, 1.6 or 3. 0 is FKP"
+            help = "value of p, either -1, 0, 1, 1.6 or 3. -1 is FKP"
             arg_type = Float64
             range_tester = (x->x ∈ choise_p)
             required = true
+        #"--mbh", "-m"
+        #    help = "cut in absolute magnitude"
+        #    arg_type = Float64
+        #    default = -20.
     end
 
     return parse_args(s)
@@ -38,31 +45,34 @@ function get_sample(sample)
     return name
 end
 
-function get_folder_model(sample, p, NN_weights::Bool=false)
+function get_folder_model(sample, p::Number, NN_weights::Bool=false)
     CG = get_sample(sample)
     in_base = NN_weights ? "input_NN_weights" : "input"
+    p = p == -1 ? "fkp" : p
     folder = joinpath(eboss_folder, "fits", in_base, "models", CG, "$p")
 
     return folder
 end
 
-function get_folder_data(sample, p, NN_weights::Bool=false)
+function get_folder_data(sample, p::Number, NN_weights::Bool=false)
     CG = get_sample(sample)
     in_base = NN_weights ? "input_NN_weights" : "input"
+    p = p == -1 ? "fkp" : p
     folder = joinpath(eboss_folder, "fits", in_base, "data", "spectra", CG, "$p")
 
     return folder
 end
 
-function get_folder_window(sample, p, NN_weights::Bool=false)
+function get_folder_window(sample, p::Number, NN_weights::Bool=false)
     CG = get_sample(sample)
     in_base = NN_weights ? "input_NN_weights" : "input"
+    p = p == -1 ? "fkp" : p
     folder = joinpath(eboss_folder, "fits", in_base, "data", "window", "Qkp", CG, "$p")
 
     return folder
 end
 
-function get_Pk_model(sample, p, NN_weights::Bool=false)
+function get_Pk_model(sample, p::Number, NN_weights::Bool=false)
     Pk_folder = get_folder_model(sample, p, NN_weights)
     Pk_file = joinpath(Pk_folder, "Pk_model.dat")
 
@@ -70,7 +80,7 @@ function get_Pk_model(sample, p, NN_weights::Bool=false)
     return Pk[:,2:end]
 end
 
-function get_alphak_model(sample, p, NN_weights::Bool=false)
+function get_alphak_model(sample, p::Number, NN_weights::Bool=false)
     alphak_folder = get_folder_model(sample, p, NN_weights)
     alphak_file = joinpath(alphak_folder, "alphatildek_model.dat")
 
@@ -78,7 +88,7 @@ function get_alphak_model(sample, p, NN_weights::Bool=false)
     return alphak[:,2:end]
 end
 
-function get_fz_model(sample, p, NN_weights::Bool=false)
+function get_fz_model(sample, p::Number, NN_weights::Bool=false)
     fz_folder = get_folder_model(sample, p, NN_weights)
     fz_file = joinpath(fz_folder, "Dz_fz_model.dat")
 
@@ -95,7 +105,7 @@ function get_kₚ(NN_weights::Bool=false)
     return k
 end
 
-function get_Pk_data(sample, p, NN_weights::Bool=false)
+function get_Pk_data(sample, p::Number, NN_weights::Bool=false)
     Pk_folder = get_folder_data(sample, p, NN_weights)
     Pk_file = joinpath(Pk_folder, "Pk_data.dat")
 
@@ -103,7 +113,7 @@ function get_Pk_data(sample, p, NN_weights::Bool=false)
     return Pk[:,1], Pk[:,2]
 end
 
-function get_Σ(sample, p, NN_weights::Bool=false)
+function get_Σ(sample, p::Number, NN_weights::Bool=false)
     Σ_folder = get_folder_data(sample, p, NN_weights)
     Σ_file = joinpath(Σ_folder, "covariance.dat")
 
@@ -111,7 +121,7 @@ function get_Σ(sample, p, NN_weights::Bool=false)
     return Σ
 end
 
-function get_Ql(sample, p, NN_weights::Bool=false)
+function get_Ql(sample, p::Number, NN_weights::Bool=false)
     Ql_folder = get_folder_window(sample, p, NN_weights)
 
     Qls = []
@@ -127,9 +137,10 @@ function get_Ql(sample, p, NN_weights::Bool=false)
     return Qₗ
 end
 
-function get_W₀k(sample, p, NN_weights::Bool=false)
+function get_W₀k(sample, p::Number, NN_weights::Bool=false)
     GC = get_sample(sample)
     in_base = NN_weights ? "input_NN_weights" : "input"
+    p = p == -1 ? "fkp" : p
     folder = joinpath(eboss_folder, "fits", in_base, "data", "window", "Wk2", GC, "$p")
     name = joinpath(folder, "Wk2.dat")
 
@@ -137,14 +148,23 @@ function get_W₀k(sample, p, NN_weights::Bool=false)
     return W₀k[:,1], W₀k[:,2]
 end
 
-function get_Wric(sample, p, NN_weights::Bool=false)
+function get_Wric(sample, p::Number, NN_weights::Bool=false)
     GC = get_sample(sample)
     in_base = NN_weights ? "input_NN_weights" : "input"
+    p = p == -1 ? "fkp" : p
     folder = joinpath(eboss_folder, "fits", in_base, "data", "window", "Wkric", GC, "$p")
     name = joinpath(folder, "Wkric.dat")
 
     Wkric = readdlm(name, comments=true)
     return Wkric
+end
+
+function get_Pmocks(sample, p::Number)
+    Pk_folder = get_folder_data(sample, p) #no mocks for NN weights
+    Pk_file = joinpath(Pk_folder, "Pk_mocks.dat")
+
+    Pks = readdlm(Pk_file, comments=true)
+    return Pks
 end
 
 function check_k_dimension(k_data, Σ)
@@ -173,6 +193,7 @@ end
 function get_output_folder(sample, p, NN_weights::Bool=false)
     CG = get_sample(sample)
     out_base = NN_weights ? "output_NN_weights" : "output"
+    p = p == -1 ? "fkp" : p
     folder = joinpath(eboss_folder, "fits", out_base, CG, "$p")
 
     out_base = join([out_base, "/"])
@@ -207,6 +228,7 @@ end
 function get_output_folder(sample, p, p_weight, NN_weights::Bool=false)
     CG = get_sample(sample)
     out_base = NN_weights ? "output_NN_weights" : "output"
+    p_weight = p_weight == -1 ? "fkp" : p_weight
     folder = joinpath(eboss_folder, "fits", out_base, CG,  "$p_weight", "$p")
 
     out_base = join([out_base, "/"])
@@ -255,4 +277,70 @@ end
 function interpolate_fk(k, fk, new_k)
     fk_interp = Spline1D(k, fk)
     return fk_interp(new_k)
+end
+
+#fatser differentiation
+
+function vecmat_tullio(a, B)
+    return @tullio c[j] := a[i] * B[i,j]
+end
+
+function matvec_tullio(B, a)
+    return @tullio c[i] := B[i,j] * a[j]
+end
+
+function vecvec(a, b)
+    return a .* b
+end
+
+Zygote.@adjoint function vecmat_tullio(a, B)
+    y = vecmat_tullio(a, B)
+    function vecmat_tullio_pullback(ȳ)
+        ∂a = @thunk(vecmat_tullio(ȳ, B'))
+        ∂B = @thunk(vecvec(a, ȳ')) #vec*vec
+        return (∂a, ∂B)
+    end
+    return y, vecmat_tullio_pullback
+end
+
+Zygote.@adjoint function matvec_tullio(B, a)
+    y = matvec_tullio(B, a)
+    function matvec_tullio_pullback(ȳ)
+        ∂B = @thunk(vecvec(ȳ, a')) #vec*vec
+        ∂a = @thunk(matvec_tullio(B', ȳ))
+        return (∂B, ∂a)
+    end
+    return y, matvec_tullio_pullback
+end
+
+Zygote.@adjoint function vecvec(a, b)
+    y = vecvec(a, b)
+    function vecvec_pullback(ȳ)
+        ∂a = @thunk(vecvec(ȳ, b))
+        ∂b = @thunk(vecvec(a, ȳ)) #vec*vec
+        return (∂a, ∂b)
+    end
+    return y, vecvec_pullback
+end
+
+function windowconv_tullio(Q0, P0, Q2, P2, Q4, P4)
+    return @tullio convolvedPk[i] := Q0[i,k] * P0[i,k] + Q2[i,k] * P2[i,k] + Q4[i,k] * P4[i,k]
+end
+
+function tullio_vecmatmul(Q, P)
+    return @tullio Pn[i,k] :=  Q[i,k] * P[i]
+end
+
+Zygote.@adjoint function windowconv_tullio(Q0, P0, Q2, P2, Q4, P4)
+    y = windowconv_tullio(Q0, P0, Q2, P2, Q4, P4)
+    function windowconv_tullio_pullback(ȳ)
+        ∂Q0 = @thunk(tullio_vecmatmul(P0, ȳ))
+        ∂P0 = @thunk(tullio_vecmatmul(Q0, ȳ))
+        ∂Q2 = @thunk(tullio_vecmatmul(P2, ȳ))
+        ∂P2 = @thunk(tullio_vecmatmul(Q2, ȳ))
+        ∂Q4 = @thunk(tullio_vecmatmul(P4, ȳ))
+        ∂P4 = @thunk(tullio_vecmatmul(Q4, ȳ))
+        return (∂Q0, ∂P0, ∂Q2, ∂P2, ∂Q4, ∂P4)
+    end
+    return y, windowconv_tullio_pullback
 end

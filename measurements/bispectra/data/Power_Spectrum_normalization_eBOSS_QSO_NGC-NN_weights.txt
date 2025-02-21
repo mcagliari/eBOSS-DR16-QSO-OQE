@@ -1,0 +1,2 @@
+# Rustico's pk normalizations for NGC
+1.728072e+00

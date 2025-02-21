@@ -3,6 +3,7 @@ using Distributed
 using Plots
 using StatsPlots
 using PairPlots
+using CairoMakie
 using MCMCChains
 using DataFrames
 using NPZ
@@ -20,6 +21,7 @@ addprocs(12)
     using Plots
     using StatsPlots
     using PairPlots
+    using CairoMakie
     using MCMCChains
     using DataFrames
     using NPZ
@@ -32,10 +34,10 @@ end
 #model instance
 @everywhere begin
     #parsed_args = parse_commandline()
-    GC = "N" #parsed_args["sample"] #Galaxy cap to analyse
-    p_weight = 1.0 #weights used for P(k) (0.0 = FKP)
+    GC = "S" #parsed_args["sample"] #Galaxy cap to analyse
+    p_weight = -1.0 #weights used for P(k) (0.0 = FKP)
     p = 1.0 #parsed_args["p"] #p to be used in the inference, if nothing it makes inference on f_NL*b_phi
-    NN_weights = true #either to use the data from the linear weight catalog or the NN weight catalogue
+    NN_weights = false #either to use the data from the linear weight catalog or the NN weight catalogue
     RIC = true #either to appy or not the RIC, GIC is always applied
 
     Pk_model = get_Pk_model(GC, p_weight, NN_weights)
@@ -93,7 +95,7 @@ end
     WH = (1000 - len_k - 2) / (1000 - 1) #wishhart factor
 
     if RIC
-        data_model = P_qso_convolved_IC(Pk_data, kₚ, Pk_model, p, αk_model, fz_model, Σ ./ WH, Qₗ, W₀k, k_start, vec(Wric))
+        data_model = P_qso_convolved_IC(Pk_data, kₚ, Pk_model, p, αk_model, fz_model, Σ ./ WH, Qₗ, W₀k, k_start, vec(Wric), true)
     else
         data_model = P_qso_convolved_IC(Pk_data, kₚ, Pk_model, p, αk_model, fz_model, Σ ./ WH, Qₗ, W₀k, k_start)
     end
@@ -101,9 +103,9 @@ end
 
 map = optimize(data_model, MAP())
 
-sampler = NUTS(1000, 0.65)
+sampler = NUTS(100, 0.65)#, adtype=AutoZygote()) #Z does not work with mutating arrays
 
-chain = sample(data_model, sampler, MCMCDistributed(), 3000, 12, init_theta = map.values.array)
+chain = sample(data_model, sampler, MCMCDistributed(), 300, 12, init_theta = map.values.array)
 
 describe(chain)
 
@@ -121,7 +123,7 @@ savefig(pl, joinpath(output_folder, "traces.png"))
 df = DataFrame(chain)
 par = df[:,[:f_nl, :b₁, :σ_fog, :N]]
 
-c_plot = PairPlots.corner(par)
-savefig(c_plot, joinpath(output_folder, "corner.png"))
+c_plot = PairPlots.pairplot(par)
+save(joinpath(output_folder, "corner.png"), c_plot)
 
 npzwrite(joinpath(output_folder, "chain.npy"), chain.value.data)

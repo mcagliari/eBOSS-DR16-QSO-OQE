@@ -1,0 +1,46 @@
+#Data file ../eboss_data/eBOSS_QSO_clustering_data-SGC-vDR16.txt
+#Random file ../eboss_data/eBOSS_QSO_clustering_random-SGC-vDR16.txt
+#Number of data elements used: 125499
+#Number of random elements used: 7169801
+#Effective number of data elements weighted by wcol: 135244.203654
+#Effective number of random elements weighted by wcol: 7727606.743769
+#Effective number of data elements weighted by wcol*wsys: 135477.949666
+#Effective number of random elements weighted by wcol*wsys: 7557160.948627
+#Effective number of data elements weighted by wcol*wsys*wfkp: 91814.709841
+#Effective number of random elements weighted by wcol*wsys*wfkp: 5121542.082942
+#Effective redshift value from data 1.541280
+#Effective redshift value from randoms 1.541240
+#Size of the Box 6400.000000 Mpc/h
+#Area of the survey used 1839.000000 deg^2
+#Value of alpha: 0.017927
+#Normalization using randoms file
+#Normalization using density
+#Normalization 9.816242e-01
+#Shot noise factor 1.000000
+#Shot noise value 72131.588305
+#Type of Computation: FFT
+#Number of grid cells: 512
+#Type of Mass Assigment: PCS
+#Type of Yamamoto: GridCenter
+#Number of Interlacing steps: 2
+#Grid Correction: yes
+#Value of Om=0.310000
+#Quadrupole as L0L2
+#Hexadecapole as L0L4
+#k-centerbin	 k-eff	 Monopole-Pshotnoise	 Quadrupole	 Hexadecapole	 number of modes	 Pshotnoise
+0.005000 0.005785 50702.014007 -5772.142749 -60056.081303 1782 72131.588305
+0.010000 0.010426 31632.179779 2975.379657 1482.466534 6846 72131.588305
+0.015000 0.015283 30881.410709 956.374769 -7394.699947 14994 72131.588305
+0.020000 0.020215 36336.475836 9976.718121 9458.666817 26838 72131.588305
+0.025000 0.025168 31213.158247 12808.873384 -12655.869704 41424 72131.588305
+0.030000 0.030121 31593.733496 10397.754846 3655.336159 59670 72131.588305
+0.035000 0.035112 28108.931537 5879.358892 -602.384204 81942 72131.588305
+0.040000 0.040109 22267.667341 7532.013778 -199.677185 106306 72131.588305
+0.045000 0.045093 19200.539276 12371.459123 -5311.615501 134526 72131.588305
+0.050000 0.050083 17665.527952 10835.265094 140.092577 166194 72131.588305
+0.055000 0.055083 15982.720127 5177.937022 -1499.089575 201558 72131.588305
+0.060000 0.060076 17484.680351 6623.013215 -2221.621207 238590 72131.588305
+0.065000 0.065066 15075.983490 8650.774879 1757.077558 280890 72131.588305
+0.070000 0.070064 15847.749341 8923.554777 5213.616466 325710 72131.588305
+0.075000 0.075061 13274.532331 6139.288253 -2570.007598 373674 72131.588305
+0.080000 0.080056 12403.399413 4266.627642 -102.864473 424836 72131.588305
